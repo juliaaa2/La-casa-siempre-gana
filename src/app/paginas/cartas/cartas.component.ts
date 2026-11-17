@@ -57,6 +57,17 @@ interface UltimaJugada {
         box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
       }
       .carta.roja { color: #c62828; }
+      .carta.entra { animation: deslizar 0.5s ease-out; }
+      @keyframes deslizar { from { transform: translateX(120px) rotate(8deg); opacity: 0.3; } to { transform: none; opacity: 1; } }
+      .carta-3d { width: 96px; height: 136px; perspective: 700px; }
+      .giro-carta { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; animation: voltear 0.75s ease-in-out 0.15s forwards; }
+      .giro-carta .carta { position: absolute; inset: 0; backface-visibility: hidden; }
+      .giro-carta .cara-frontal { transform: rotateY(180deg); }
+      @keyframes voltear {
+        0% { transform: rotateY(0deg) translateY(0); }
+        50% { transform: rotateY(90deg) translateY(-16px) scale(1.08); }
+        100% { transform: rotateY(180deg) translateY(0); }
+      }
       .carta.reverso { background: repeating-linear-gradient(45deg, #1565c0, #1565c0 8px, #0d47a1 8px, #0d47a1 16px); }
       .flecha { font-size: 2rem; color: var(--dorado); }
       .apuestas { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
@@ -74,6 +85,9 @@ export class CartasComponent {
   readonly ultimo = signal<UltimaJugada | null>(null);
   readonly mensaje = signal('');
   monto = 1000;
+  /** Carta que se está volteando (mientras dura la animación). */
+  readonly revelada = signal<Carta | null>(null);
+  readonly volteando = signal(false);
 
   readonly nombreCarta = nombreCarta;
   readonly esRoja = esRoja;
@@ -163,22 +177,34 @@ export class CartasComponent {
     const siguiente = this.baraja.robar();
     const gano = ganaCartas(eleccion, anterior, siguiente);
     const ganancia = Math.round(resolverCartas(eleccion, monto, anterior, siguiente, p) * 100) / 100;
-    this.registro.registrar({
-      juego: 'cartas',
-      apuesta: eleccion,
-      monto,
-      resultado: `${nombreCarta(anterior)} → ${nombreCarta(siguiente)}`,
-      gano,
-      ganancia,
-      probabilidad: p,
-    });
-    this.ultimo.set({ anterior, siguiente, eleccion, probabilidad: p, ganancia, gano });
-    this.actual.set(siguiente);
-    this.restantes.set([...this.baraja.restantes]);
-    if (this.baraja.cantidad === 0) this.mensaje.set('Esa era la última carta. Empieza una nueva baraja.');
+    this.volteando.set(true);
+    this.ultimo.set(null);
+    this.revelada.set(siguiente);
+
+    setTimeout(() => {
+      this.registro.registrar({
+        juego: 'cartas',
+        apuesta: eleccion,
+        monto,
+        resultado: `${nombreCarta(anterior)} → ${nombreCarta(siguiente)}`,
+        gano,
+        ganancia,
+        probabilidad: p,
+      });
+      this.ultimo.set({ anterior, siguiente, eleccion, probabilidad: p, ganancia, gano });
+    }, 950);
+
+    setTimeout(() => {
+      this.revelada.set(null);
+      this.actual.set(siguiente);
+      this.restantes.set([...this.baraja.restantes]);
+      this.volteando.set(false);
+      if (this.baraja.cantidad === 0) this.mensaje.set('Esa era la última carta. Empieza una nueva baraja.');
+    }, 1900);
   }
 
   nuevaBaraja(): void {
+    if (this.volteando()) return;
     this.baraja.reiniciar();
     this.actual.set(this.baraja.robar());
     this.restantes.set([...this.baraja.restantes]);

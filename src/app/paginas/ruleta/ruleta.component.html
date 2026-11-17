@@ -20,11 +20,56 @@
         <label for="monto" style="color: #fff">Monto a apostar</label>
         <input id="monto" type="number" min="100" step="100" [(ngModel)]="monto" />
       </div>
-      <button class="boton" style="margin-bottom: 10px" (click)="girar()">Girar la ruleta</button>
+      <button class="boton" style="margin-bottom: 10px" (click)="girar()" [disabled]="girando()">
+        {{ girando() ? 'Girando…' : 'Girar la ruleta' }}
+      </button>
     </div>
     @if (mensaje()) {
       <p style="color: #ffcdd2">{{ mensaje() }}</p>
     }
+    <div class="rueda-caja" [class.sin-trans]="sinTransicion()">
+      <svg viewBox="-160 -160 320 320" aria-label="Ruleta">
+        <defs>
+          <radialGradient id="madera" cx="50%" cy="45%" r="60%">
+            <stop offset="0%" stop-color="#8d5a2b" />
+            <stop offset="100%" stop-color="#4e2c12" />
+          </radialGradient>
+          <radialGradient id="cono" cx="45%" cy="40%" r="70%">
+            <stop offset="0%" stop-color="#2f7d4a" />
+            <stop offset="100%" stop-color="#0f3d22" />
+          </radialGradient>
+          <radialGradient id="bolaBrillo" cx="35%" cy="30%" r="70%">
+            <stop offset="0%" stop-color="#ffffff" />
+            <stop offset="100%" stop-color="#b0bec5" />
+          </radialGradient>
+        </defs>
+        <!-- Borde de madera y pista de la bola (fijos) -->
+        <circle r="156" fill="url(#madera)" />
+        <circle r="148" fill="#3b2210" stroke="#c9a227" stroke-width="2" />
+        <circle r="126" fill="none" stroke="#c9a227" stroke-width="1.5" />
+        <!-- Parte que gira -->
+        <g class="giro" [style.transform]="'rotate(' + rotRueda() + 'deg)'">
+          @for (s of sectores; track s.n) {
+            <path class="casilla-svg" [class.ganadora]="!girando() && ganadora() === s.n" [attr.d]="s.d" [attr.fill]="s.color" />
+            <text class="num-casilla" [attr.transform]="'rotate(' + s.angulo + ') translate(0 -113)'">{{ s.n }}</text>
+          }
+          <circle r="92" fill="url(#cono)" stroke="#c9a227" stroke-width="2" />
+          <circle r="60" fill="none" stroke="#c9a227" stroke-width="0.8" opacity="0.6" />
+          @for (r of rayos; track r) {
+            <rect x="-2.5" y="-58" width="5" height="44" rx="2.5" fill="#d4af37" [attr.transform]="'rotate(' + r + ')'" />
+          }
+          <circle r="16" fill="#d4af37" stroke="#8a6d1d" stroke-width="2" />
+          <circle r="6" fill="#fff3c4" />
+        </g>
+        <!-- La bola -->
+        <g class="giro-bola" [style.transform]="'rotate(' + rotBola() + 'deg)'">
+          <g class="caida" [style.transform]="'translateY(' + -radioBola() + 'px)'">
+            <circle r="6.5" fill="url(#bolaBrillo)" stroke="#78909c" stroke-width="0.6" />
+          </g>
+        </g>
+      </svg>
+    </div>
+    <p class="estado">{{ girando() ? 'No va más… la bola está girando' : '' }}</p>
     @if (ultimo(); as u) {
       <div class="bola" [class]="u.color">{{ u.n }}</div>
       <p style="text-align: center; font-weight: 700; font-size: 1.2rem" [style.color]="u.ganancia > 0 ? '#a5d6a7' : '#ffcdd2'">

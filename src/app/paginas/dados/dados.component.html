@@ -20,19 +20,37 @@
           <label for="monto" style="color: #fff">Monto a apostar</label>
           <input id="monto" type="number" min="100" step="100" [(ngModel)]="monto" />
         </div>
-        <button class="boton" style="margin-bottom: 10px" (click)="lanzar()">Lanzar los dados</button>
+        <button class="boton" style="margin-bottom: 10px" (click)="lanzar()" [disabled]="lanzando()">
+          {{ lanzando() ? 'Rodando…' : 'Lanzar los dados' }}
+        </button>
       </div>
       @if (mensaje()) {
         <p style="color: #ffcdd2">{{ mensaje() }}</p>
       }
+      <div class="pano" [class.lanzado-a]="tiros() > 0 && tiros() % 2 === 1" [class.lanzado-b]="tiros() > 0 && tiros() % 2 === 0">
+        @for (g of giros(); track $index) {
+          <div class="escena">
+            <div class="cubo" [style.transform]="transformar(g)">
+              @for (c of caras; track c) {
+                <div class="cara" [class]="'cara c' + c">
+                  @for (k of casillas; track k) {
+                    <span class="punto" [class.lleno]="tienePunto(c, k)"></span>
+                  }
+                </div>
+              }
+            </div>
+          </div>
+        }
+      </div>
       @if (ultimo(); as u) {
         <div style="text-align: center; margin-top: 10px">
-          <span class="dado">{{ dibujo(u.d1) }}</span><span class="dado">{{ dibujo(u.d2) }}</span>
           <p class="resultado-grande">{{ u.d1 }} + {{ u.d2 }} = {{ u.d1 + u.d2 }}</p>
           <p [style.color]="u.ganancia > 0 ? '#a5d6a7' : '#ffcdd2'" style="font-weight: 700; font-size: 1.2rem">
             {{ u.ganancia > 0 ? 'Ganaste ' + (u.ganancia | pesos) : 'Perdiste ' + (0 - u.ganancia | pesos) }}
           </p>
         </div>
+      } @else if (lanzando()) {
+        <p style="text-align: center; margin-top: 10px; color: var(--dorado); font-weight: 700">Los dados están rodando…</p>
       }
     </section>
 

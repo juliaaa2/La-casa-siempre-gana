@@ -33,6 +33,21 @@ import { valorEsperado, varianzaGanancia } from '../../core/modelos';
 const CARAS_DIBUJO = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
 const CARAS_NUM: number[] = [1, 2, 3, 4, 5, 6];
 
+/** Posiciones (1 a 9, por filas) de los puntos en cada cara del dado. */
+const PUNTOS: Record<number, number[]> = { 1: [5], 2: [3, 7], 3: [3, 5, 7], 4: [1, 3, 7, 9], 5: [1, 3, 5, 7, 9], 6: [1, 3, 4, 6, 7, 9] };
+/** Giro (en grados) que deja cada cara mirando al frente. */
+const ORIENTACION: Record<number, { x: number; y: number }> = {
+  1: { x: 0, y: 0 },
+  6: { x: 0, y: 180 },
+  3: { x: 0, y: -90 },
+  4: { x: 0, y: 90 },
+  2: { x: -90, y: 0 },
+  5: { x: 90, y: 0 },
+};
+const DURACION_LANZAMIENTO = 1750;
+
+interface GiroDado { x: number; y: number; z: number }
+
 @Component({
   selector: 'app-dados',
   standalone: true,
@@ -41,6 +56,62 @@ const CARAS_NUM: number[] = [1, 2, 3, 4, 5, 6];
   styles: [
     `
       .dado { font-size: 4.5rem; line-height: 1; margin: 0 6px; }
+      .pano {
+        position: relative;
+        height: 170px;
+        margin-top: 12px;
+        border-radius: 14px;
+        background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.25));
+        border: 3px solid #6d4c2f;
+        box-shadow: inset 0 0 25px rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 34px;
+        overflow: hidden;
+      }
+      .escena { width: 70px; height: 70px; perspective: 500px; }
+      .lanzado-a .escena { animation: rodarA 1.5s cubic-bezier(0.2, 0.7, 0.3, 1); }
+      .lanzado-b .escena { animation: rodarB 1.5s cubic-bezier(0.2, 0.7, 0.3, 1); }
+      .lanzado-a .escena:nth-child(2), .lanzado-b .escena:nth-child(2) { animation-duration: 1.7s; }
+      @keyframes rodarA {
+        0% { transform: translate(-260px, -60px); }
+        35% { transform: translate(-90px, 12px); }
+        55% { transform: translate(-30px, -22px); }
+        75% { transform: translate(-6px, 4px); }
+        100% { transform: translate(0, 0); }
+      }
+      @keyframes rodarB {
+        0% { transform: translate(-260px, -60px); }
+        35% { transform: translate(-90px, 12px); }
+        55% { transform: translate(-30px, -22px); }
+        75% { transform: translate(-6px, 4px); }
+        100% { transform: translate(0, 0); }
+      }
+      .cubo { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; transition: transform 1.6s cubic-bezier(0.15, 0.65, 0.25, 1); }
+      .cara {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(145deg, #ffffff, #e6e6e6);
+        border-radius: 12px;
+        border: 1px solid #bdbdbd;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        grid-template-rows: repeat(3, 1fr);
+        padding: 9px;
+        box-sizing: border-box;
+        box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.18);
+        backface-visibility: hidden;
+      }
+      .punto { width: 13px; height: 13px; border-radius: 50%; place-self: center; }
+      .punto.lleno { background: radial-gradient(circle at 35% 35%, #555, #000); }
+      .cara.c1 .punto.lleno { background: radial-gradient(circle at 35% 35%, #ef5350, #b71c1c); width: 17px; height: 17px; }
+      .c1 { transform: rotateY(0deg) translateZ(35px); }
+      .c6 { transform: rotateY(180deg) translateZ(35px); }
+      .c3 { transform: rotateY(90deg) translateZ(35px); }
+      .c4 { transform: rotateY(-90deg) translateZ(35px); }
+      .c2 { transform: rotateX(90deg) translateZ(35px); }
+      .c5 { transform: rotateX(-90deg) translateZ(35px); }
       .calor td { min-width: 52px; }
       .marginal { background: #fff8e1; font-weight: 600; }
     `,
@@ -65,6 +136,37 @@ export class DadosComponent {
   readonly mensaje = signal('');
 
   readonly apuesta = computed(() => apuestaDados(this.apuestaId()));
+
+  /* Animación de los dados en 3D */
+  readonly casillas = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+  readonly lanzando = signal(false);
+  readonly tiros = signal(0);
+  readonly giros = signal<GiroDado[]>([
+    { x: -12, y: 18, z: 0 },
+    { x: -100, y: -14, z: 0 },
+  ]);
+
+  tienePunto(cara: number, casilla: number): boolean {
+    return PUNTOS[cara].includes(casilla);
+  }
+
+  transformar(g: GiroDado): string {
+    return `rotateZ(${g.z}deg) rotateX(${g.x}deg) rotateY(${g.y}deg)`;
+  }
+
+  /** Nuevo giro: varias vueltas completas que terminan con la cara del resultado al frente. */
+  private girarHacia(actual: GiroDado, cara: number): GiroDado {
+    const o = ORIENTACION[cara];
+    const vueltas = (v: number, objetivo: number, extra: number) => {
+      const base = Math.ceil((v + 360 * extra - objetivo) / 360) * 360;
+      return base + objetivo;
+    };
+    return {
+      x: vueltas(actual.x, o.x, 2 + Math.floor(aleatorio() * 2)),
+      y: vueltas(actual.y, o.y, 2 + Math.floor(aleatorio() * 2)),
+      z: Math.round((aleatorio() - 0.5) * 30),
+    };
+  }
 
   /** Todos mis lanzamientos de dados (pares (X₁, X₂)). */
   readonly lanzamientos = computed(() =>
@@ -166,18 +268,28 @@ export class DadosComponent {
     }
     const d1 = lanzarDado();
     const d2 = lanzarDado();
-    const ganancia = resolverDados(this.apuestaId(), monto, d1, d2);
-    this.registro.registrar({
-      juego: 'dados',
-      apuesta: this.apuestaId(),
-      monto,
-      resultado: `${d1} + ${d2} = ${d1 + d2}`,
-      gano: ganancia > 0,
-      ganancia,
-      dado1: d1,
-      dado2: d2,
-    });
-    this.ultimo.set({ d1, d2, ganancia });
+    const apuestaId = this.apuestaId();
+    const ganancia = resolverDados(apuestaId, monto, d1, d2);
+    const [g1, g2] = this.giros();
+    this.lanzando.set(true);
+    this.ultimo.set(null);
+    this.tiros.update((t) => t + 1);
+    this.giros.set([this.girarHacia(g1, d1), this.girarHacia(g2, d2)]);
+
+    setTimeout(() => {
+      this.registro.registrar({
+        juego: 'dados',
+        apuesta: apuestaId,
+        monto,
+        resultado: `${d1} + ${d2} = ${d1 + d2}`,
+        gano: ganancia > 0,
+        ganancia,
+        dado1: d1,
+        dado2: d2,
+      });
+      this.ultimo.set({ d1, d2, ganancia });
+      this.lanzando.set(false);
+    }, DURACION_LANZAMIENTO);
   }
 
   /* ---------------- Modo detective ---------------- */

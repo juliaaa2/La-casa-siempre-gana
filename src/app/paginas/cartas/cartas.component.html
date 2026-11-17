@@ -7,9 +7,20 @@
       Orden: 2, 3, …, 10, J, Q, K, A. Si sale una carta del mismo valor, pierdes. Las cartas no se devuelven a la baraja.
     </p>
     <div class="cartas-mesa">
-      <div class="carta" [class.roja]="esRoja(actual())">{{ nombreCarta(actual()) }}</div>
+      @for (c of [actual()]; track c) {
+        <div class="carta entra" [class.roja]="esRoja(c)">{{ nombreCarta(c) }}</div>
+      }
       <span class="flecha">→</span>
-      <div class="carta reverso"></div>
+      @if (revelada(); as r) {
+        <div class="carta-3d">
+          <div class="giro-carta">
+            <div class="carta reverso"></div>
+            <div class="carta cara-frontal" [class.roja]="esRoja(r)">{{ nombreCarta(r) }}</div>
+          </div>
+        </div>
+      } @else {
+        <div class="carta reverso"></div>
+      }
     </div>
     <p style="text-align: center; margin-top: 8px">Quedan {{ probs().restantes }} cartas en la baraja.</p>
 
@@ -20,18 +31,18 @@
 
     <div class="apuestas">
       <div class="apuesta-caja">
-        <button class="boton" style="width: 100%" (click)="apostar('mayor')" [disabled]="probs().mayor === 0">Mayor ▲</button>
+        <button class="boton" style="width: 100%" (click)="apostar('mayor')" [disabled]="probs().mayor === 0 || volteando()">Mayor ▲</button>
         <p style="margin-top: 8px">P(mayor) = {{ probs().mayor | num: 4 }}</p>
         <p>Paga {{ pagoMayor() | num: 2 }} a 1</p>
       </div>
       <div class="apuesta-caja">
-        <button class="boton" style="width: 100%" (click)="apostar('menor')" [disabled]="probs().menor === 0">Menor ▼</button>
+        <button class="boton" style="width: 100%" (click)="apostar('menor')" [disabled]="probs().menor === 0 || volteando()">Menor ▼</button>
         <p style="margin-top: 8px">P(menor) = {{ probs().menor | num: 4 }}</p>
         <p>Paga {{ pagoMenor() | num: 2 }} a 1</p>
       </div>
     </div>
     <p style="margin-top: 8px">P(igual) = {{ probs().igual | num: 4 }} (en ese caso pierdes).</p>
-    <button class="boton secundario" (click)="nuevaBaraja()">Nueva baraja</button>
+    <button class="boton secundario" (click)="nuevaBaraja()" [disabled]="volteando()">Nueva baraja</button>
 
     @if (mensaje()) {
       <p style="color: #ffcdd2; margin-top: 8px">{{ mensaje() }}</p>
