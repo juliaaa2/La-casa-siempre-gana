@@ -1,0 +1,121 @@
+<h1>🃏 Cartas: mayor o menor</h1>
+
+<div class="rejilla rejilla-2">
+  <section class="mesa">
+    <h2>¿La siguiente carta será mayor o menor?</h2>
+    <p class="nota" style="color: #d9e2ec">
+      Orden: 2, 3, …, 10, J, Q, K, A. Si sale una carta del mismo valor, pierdes. Las cartas no se devuelven a la baraja.
+    </p>
+    <div class="cartas-mesa">
+      <div class="carta" [class.roja]="esRoja(actual())">{{ nombreCarta(actual()) }}</div>
+      <span class="flecha">→</span>
+      <div class="carta reverso"></div>
+    </div>
+    <p style="text-align: center; margin-top: 8px">Quedan {{ probs().restantes }} cartas en la baraja.</p>
+
+    <div class="campo" style="margin: 0 auto">
+      <label for="monto" style="color: #fff">Monto a apostar</label>
+      <input id="monto" type="number" min="100" step="100" [(ngModel)]="monto" />
+    </div>
+
+    <div class="apuestas">
+      <div class="apuesta-caja">
+        <button class="boton" style="width: 100%" (click)="apostar('mayor')" [disabled]="probs().mayor === 0">Mayor ▲</button>
+        <p style="margin-top: 8px">P(mayor) = {{ probs().mayor | num: 4 }}</p>
+        <p>Paga {{ pagoMayor() | num: 2 }} a 1</p>
+      </div>
+      <div class="apuesta-caja">
+        <button class="boton" style="width: 100%" (click)="apostar('menor')" [disabled]="probs().menor === 0">Menor ▼</button>
+        <p style="margin-top: 8px">P(menor) = {{ probs().menor | num: 4 }}</p>
+        <p>Paga {{ pagoMenor() | num: 2 }} a 1</p>
+      </div>
+    </div>
+    <p style="margin-top: 8px">P(igual) = {{ probs().igual | num: 4 }} (en ese caso pierdes).</p>
+    <button class="boton secundario" (click)="nuevaBaraja()">Nueva baraja</button>
+
+    @if (mensaje()) {
+      <p style="color: #ffcdd2; margin-top: 8px">{{ mensaje() }}</p>
+    }
+    @if (ultimo(); as u) {
+      <p style="margin-top: 10px; font-weight: 700" [style.color]="u.gano ? '#a5d6a7' : '#ffcdd2'">
+        {{ nombreCarta(u.anterior) }} → {{ nombreCarta(u.siguiente) }}: apostaste «{{ u.eleccion }}» con probabilidad
+        {{ u.probabilidad | num: 4 }}.
+        {{ u.gano ? 'Ganaste ' + (u.ganancia | pesos) : 'Perdiste ' + (0 - u.ganancia | pesos) }}
+      </p>
+    }
+  </section>
+
+  <app-panel-teoria
+    [evento]="'Promedio de tus apuestas de cartas. La probabilidad cambia en cada ronda porque depende de las cartas que ya salieron.'"
+    [probabilidad]="panel().probabilidad"
+    [frecuencia]="panel().frecuencia"
+    [n]="panel().n"
+    [valorEsperado]="panel().ev"
+    [gananciaPromedio]="panel().real"
+  />
+</div>
+
+<section class="tarjeta">
+  <h2>Probabilidad condicional sin reposición</h2>
+  <p>
+    Como las cartas no se devuelven, cada carta que sale cambia la probabilidad de la siguiente. La app cuenta cuántas
+    de las cartas que quedan son mayores, menores o iguales que la actual:
+  </p>
+  <p class="formula">
+    P(mayor | carta actual = {{ nombreCarta(actual()) }}) = (cartas mayores que quedan) / (cartas que quedan) =
+    {{ probs().mayor | num: 4 }}
+  </p>
+  <p>
+    <strong>¿Cómo gana la casa si puedo elegir la opción más probable?</strong> Porque el pago depende de la
+    probabilidad. La casa paga lo «justo» menos una comisión del 5 %:
+  </p>
+  <p class="formula">pago = 0,95 · (1 − p) / p &nbsp;&nbsp;→&nbsp;&nbsp; E(G) = p · pago · monto − (1 − p) · monto = −0,05 · (1 − p) · monto</p>
+  <p>
+    Por cada $1.000, con la carta actual:
+    apostar «mayor» {{ probs().mayor > 0 ? 'tiene E(G) = ' + (evMayor() | pesos) : 'no está disponible (no puede ganar)' }} y
+    apostar «menor» {{ probs().menor > 0 ? 'tiene E(G) = ' + (evMenor() | pesos) : 'no está disponible (no puede ganar)' }}.
+    El valor esperado nunca es positivo.
+  </p>
+  <div style="margin-top: 10px">
+    <h3>Cartas que quedan en la baraja</h3>
+    <app-grafica [config]="graficaComposicion()" [alto]="220" />
+  </div>
+</section>
+
+<div class="rejilla rejilla-2">
+  <section class="tarjeta">
+    <h2>Hipergeométrica vs. binomial</h2>
+    <p>
+      X = número de corazones si se sacan 5 cartas de las {{ mano().N }} que quedan ({{ mano().K }} son corazones).
+      Sin reposición, X es <strong>hipergeométrica</strong>. Si las cartas se devolvieran, sería
+      <strong>binomial</strong> con p = K/N.
+    </p>
+    <p class="formula">P(X = k) = C(K, k) · C(N − K, 5 − k) / C(N, 5)</p>
+    <app-grafica [config]="mano().grafica" [alto]="240" />
+    <table class="datos">
+      <tr><th>k</th><th>Hipergeométrica</th><th>Binomial</th></tr>
+      @for (f of mano().filas; track f.k) {
+        <tr><td>{{ f.k }}</td><td>{{ f.hiper | num: 4 }}</td><td>{{ f.binom | num: 4 }}</td></tr>
+      }
+    </table>
+  </section>
+
+  <section class="tarjeta">
+    <h2>Teorema de Bayes</h2>
+    <p>
+      Con una baraja completa, sale una primera carta y se apuesta «mayor». Si ganaste, ¿cuál es la probabilidad de que la
+      primera carta fuera baja (de 2 a 7)?
+    </p>
+    <p class="formula">P(baja | gané) = P(gané | baja) · P(baja) / P(gané)</p>
+    <table class="datos">
+      <tr><td class="izq">P(baja) = 24/52</td><td>{{ bayes.pBaja | num: 4 }}</td></tr>
+      <tr><td class="izq">P(gané | baja)</td><td>{{ bayes.pGanaDadoBaja | num: 4 }}</td></tr>
+      <tr><td class="izq">P(gané), por probabilidad total</td><td>{{ bayes.pGana | num: 4 }}</td></tr>
+      <tr><td class="izq"><strong>P(baja | gané)</strong></td><td><strong>{{ bayes.pBajaDadoGana | num: 4 }}</strong></td></tr>
+    </table>
+    <p class="nota">
+      Antes de saber el resultado, la probabilidad de que la primera carta fuera baja era {{ bayes.pBaja | pct }}. Saber que
+      ganaste apostando «mayor» la sube a {{ bayes.pBajaDadoGana | pct }}.
+    </p>
+  </section>
+</div>

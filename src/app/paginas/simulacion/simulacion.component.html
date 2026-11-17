@@ -1,0 +1,106 @@
+<h1>⚡ Simulación Monte Carlo</h1>
+<p>
+  Aquí la computadora juega por ti miles de veces. Así se ve qué pasa «a largo plazo»: la frecuencia relativa se acerca a
+  la probabilidad teórica (ley de los grandes números) y la ganancia acumulada baja en línea recta con pendiente igual
+  al valor esperado.
+</p>
+
+<section class="tarjeta">
+  <div class="fila">
+    <div class="campo">
+      <label for="juego">Juego</label>
+      <select id="juego" [ngModel]="juego()" (ngModelChange)="cambiarJuego($event)">
+        @for (j of juegos; track j) {
+          <option [ngValue]="j">{{ nombreJuego[j] }}</option>
+        }
+      </select>
+    </div>
+    <div class="campo" style="max-width: 360px">
+      <label for="apuesta">Apuesta</label>
+      <select id="apuesta" [ngModel]="apuesta()" (ngModelChange)="apuesta.set($event)">
+        @for (o of opciones(); track o.id) {
+          <option [ngValue]="o.id">{{ o.nombre }}</option>
+        }
+      </select>
+    </div>
+    @if (juego() === 'ruleta' && apuesta() === 'numero') {
+      <div class="campo" style="max-width: 120px">
+        <label for="numero">Número</label>
+        <input id="numero" type="number" min="0" max="36" [(ngModel)]="numeroElegido" />
+      </div>
+    }
+    <div class="campo" style="max-width: 150px">
+      <label for="monto">Monto por jugada</label>
+      <input id="monto" type="number" min="100" step="100" [(ngModel)]="monto" />
+    </div>
+    <div class="campo" style="max-width: 150px">
+      <label for="n">Número de jugadas</label>
+      <select id="n" [(ngModel)]="n">
+        @for (c of cantidades; track c) {
+          <option [ngValue]="c">{{ c.toLocaleString('es-CO') }}</option>
+        }
+      </select>
+    </div>
+    <button class="boton" style="margin-bottom: 10px" (click)="ejecutar()">Simular</button>
+  </div>
+  @if (juego() === 'cartas') {
+    <p class="nota">
+      En cartas la probabilidad teórica es la de la primera ronda con la baraja completa. Durante la simulación la baraja se
+      va gastando y la estrategia aprovecha la información de las cartas que ya salieron, por eso la frecuencia puede quedar
+      un poco por encima. Aun así, el pago con comisión del 5 % hace que la ganancia promedio sea negativa.
+    </p>
+  }
+</section>
+
+@if (resultado(); as r) {
+  <section class="tarjeta">
+    <h2>Resultados</h2>
+    <p class="nota">{{ descripcion() }}</p>
+    <table class="datos">
+      <tr><th class="izq"></th><th>Teoría</th><th>Simulación</th></tr>
+      <tr><td class="izq">Probabilidad de ganar</td><td>{{ r.probabilidadTeorica | num: 4 }}</td><td>{{ r.frecuenciaRelativa | num: 4 }} ({{ r.exitos.toLocaleString('es-CO') }} victorias)</td></tr>
+      <tr><td class="izq">Ganancia por jugada</td><td>E(G) = {{ r.valorEsperadoTeorico | pesos }}</td><td>{{ r.gananciaPromedio | pesos }}</td></tr>
+      <tr><td class="izq">Ganancia total</td><td>{{ r.valorEsperadoTeorico * r.n | pesos }}</td><td>{{ r.gananciaTotal | pesos }}</td></tr>
+    </table>
+  </section>
+
+  <div class="rejilla rejilla-2">
+    <section class="tarjeta">
+      <h3>Ley de los grandes números</h3>
+      @if (graficaFrecuencia(); as g) {
+        <app-grafica [config]="g" [alto]="300" />
+      }
+    </section>
+    <section class="tarjeta">
+      <h3>Ganancia acumulada y recta de regresión</h3>
+      @if (graficaGanancia(); as g) {
+        <app-grafica [config]="g" [alto]="300" />
+      }
+    </section>
+  </div>
+
+  <section class="tarjeta">
+    <h2>Regresión lineal: ganancia acumulada (Y) vs. número de jugada (X)</h2>
+    <p class="formula">Ŷ = {{ r.regresion.b0 | num: 2 }} + ({{ r.regresion.b1 | num: 4 }}) · X</p>
+    <table class="datos">
+      <tr><th>Fuente de variación</th><th>Suma de cuadrados</th><th>Grados de libertad</th><th>Cuadrado medio</th><th>F</th></tr>
+      <tr><td>Regresión</td><td>{{ r.regresion.scr | num: 0 }}</td><td>{{ r.regresion.glRegresion }}</td><td>{{ r.regresion.cmr | num: 0 }}</td><td>{{ r.regresion.f | num: 2 }}</td></tr>
+      <tr><td>Error</td><td>{{ r.regresion.sce | num: 0 }}</td><td>{{ r.regresion.glError }}</td><td>{{ r.regresion.cme | num: 0 }}</td><td></td></tr>
+      <tr><td>Total</td><td>{{ r.regresion.sct | num: 0 }}</td><td>{{ r.regresion.n - 1 }}</td><td></td><td></td></tr>
+    </table>
+    <p>
+      F crítico (0,05; 1; {{ r.regresion.glError }}) = {{ r.regresion.fCritico | num: 4 }}. Valor p = {{ r.regresion.valorP | valorP }}.
+      R² = {{ r.regresion.r2 | pct }}.
+    </p>
+    <p>
+      @if (r.regresion.significativa) {
+        Dado que F ({{ r.regresion.f | num: 2 }}) es mayor que el valor crítico, se rechaza H₀: β₁ = 0, es decir, el número
+        de jugada sí explica la ganancia acumulada.
+      } @else {
+        Dado que F ({{ r.regresion.f | num: 2 }}) es menor que el valor crítico, no se rechaza H₀: β₁ = 0.
+      }
+      La pendiente b₁ = {{ r.regresion.b1 | pesos }} es lo que se gana o se pierde en promedio por jugada, y se parece al
+      valor esperado teórico E(G) = {{ r.valorEsperadoTeorico | pesos }}.
+    </p>
+  </section>
+}

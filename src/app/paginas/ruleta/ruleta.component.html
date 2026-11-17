@@ -1,0 +1,139 @@
+<h1>🎡 Ruleta europea</h1>
+
+<div class="rejilla rejilla-2">
+  <section class="mesa">
+    <h2>Haz tu apuesta</h2>
+    <div class="opciones">
+      @for (a of apuestas; track a.id) {
+        <button class="opcion" [class.activa]="apuestaId() === a.id" (click)="apuestaId.set(a.id)">{{ a.nombre }}</button>
+      }
+    </div>
+    <p>{{ apuesta().descripcion }}</p>
+    <div class="fila">
+      @if (apuestaId() === 'numero') {
+        <div class="campo" style="max-width: 120px">
+          <label for="numero" style="color: #fff">Número (0 a 36)</label>
+          <input id="numero" type="number" min="0" max="36" [ngModel]="numeroElegido()" (ngModelChange)="numeroElegido.set($event)" />
+        </div>
+      }
+      <div class="campo">
+        <label for="monto" style="color: #fff">Monto a apostar</label>
+        <input id="monto" type="number" min="100" step="100" [(ngModel)]="monto" />
+      </div>
+      <button class="boton" style="margin-bottom: 10px" (click)="girar()">Girar la ruleta</button>
+    </div>
+    @if (mensaje()) {
+      <p style="color: #ffcdd2">{{ mensaje() }}</p>
+    }
+    @if (ultimo(); as u) {
+      <div class="bola" [class]="u.color">{{ u.n }}</div>
+      <p style="text-align: center; font-weight: 700; font-size: 1.2rem" [style.color]="u.ganancia > 0 ? '#a5d6a7' : '#ffcdd2'">
+        {{ u.ganancia > 0 ? 'Ganaste ' + (u.ganancia | pesos) : 'Perdiste ' + (0 - u.ganancia | pesos) }}
+      </p>
+    }
+    <div class="tablero">
+      @for (n of numeros; track n) {
+        <div class="casilla" [class]="colorDe(n)" [class.marcada]="ultimo()?.n === n">{{ n }}</div>
+      }
+    </div>
+  </section>
+
+  <app-panel-teoria
+    [evento]="'Evento: ' + apuesta().nombre + (apuestaId() === 'numero' ? ' (' + numeroElegido() + ')' : '') + '. La frecuencia se calcula con todos tus giros.'"
+    [probabilidad]="apuesta().probabilidad"
+    [frecuencia]="frecuenciaEvento()"
+    [n]="giros().length"
+    [valorEsperado]="valorEsperado1000()"
+    [gananciaPromedio]="gananciaPor1000()"
+    [desviacion]="desviacion1000()"
+  />
+</div>
+
+<section class="tarjeta">
+  <h2>¿Por qué gana la casa? Valor esperado y varianza</h2>
+  <p>
+    La ruleta tiene 37 casillas: 18 rojas, 18 negras y el 0 verde. Si apuestas al rojo, ganas en 18 de 37 casos, no en la
+    mitad. Ese 0 es la ventaja de la casa.
+  </p>
+  <p class="formula">
+    Rojo, $1.000: &nbsp; E(G) = (18/37)(1.000) + (19/37)(−1.000) = −1.000/37 ≈ −$27
+  </p>
+  <p class="formula">
+    Un número, $1.000 (paga 35 a 1): &nbsp; E(G) = (1/37)(35.000) + (36/37)(−1.000) = −1.000/37 ≈ −$27
+  </p>
+  <p>
+    Las dos apuestas tienen el <strong>mismo valor esperado</strong>, pero muy distinto riesgo: la desviación de la
+    ganancia es ≈ $1.000 apostando a color y ≈ $5.838 apostando a un número. Por cada $1.000 apostados, en promedio se
+    pierden ≈ $27, apuestes a lo que apuestes.
+  </p>
+</section>
+
+<div class="rejilla rejilla-2">
+  <section class="tarjeta">
+    <h2>Regresión: ganancia acumulada vs. número de jugada</h2>
+    @if (analisisSaldo().n >= 3) {
+      <app-grafica [config]="analisisSaldo().grafica" [alto]="300" />
+      @if (analisisSaldo().reg; as r) {
+        <p class="formula">Ŷ = {{ r.b0 | num: 2 }} + ({{ r.b1 | num: 2 }}) · X</p>
+        <table class="datos">
+          <tr><th>Fuente</th><th>SC</th><th>gl</th><th>CM</th><th>F</th></tr>
+          <tr><td>Regresión</td><td>{{ r.scr | num: 1 }}</td><td>{{ r.glRegresion }}</td><td>{{ r.cmr | num: 1 }}</td><td>{{ r.f | num: 2 }}</td></tr>
+          <tr><td>Error</td><td>{{ r.sce | num: 1 }}</td><td>{{ r.glError }}</td><td>{{ r.cme | num: 1 }}</td><td></td></tr>
+          <tr><td>Total</td><td>{{ r.sct | num: 1 }}</td><td>{{ r.n - 1 }}</td><td></td><td></td></tr>
+        </table>
+        <p>
+          R² = {{ r.r2 | pct }}. F crítico (0,05; 1; {{ r.glError }}) = {{ r.fCritico | num: 3 }}.
+          La pendiente b₁ = {{ r.b1 | pesos }} por jugada se compara con el valor esperado promedio de tus apuestas,
+          {{ analisisSaldo().evPromedio | pesos }}. Con muchas jugadas, las dos cifras se parecen.
+        </p>
+      }
+    } @else {
+      <p class="nota">Juega al menos 3 veces para ver la regresión. En la página de Simulación puedes verla con miles de jugadas.</p>
+    }
+  </section>
+
+  <section class="tarjeta">
+    <h2>Ley de los grandes números</h2>
+    <p class="nota">Frecuencia relativa acumulada del evento «{{ apuesta().nombre }}» en tus giros, comparada con la probabilidad teórica.</p>
+    @if (giros().length > 0) {
+      <app-grafica [config]="graficaFrecuencia()" [alto]="300" />
+    } @else {
+      <p class="nota">Todavía no has girado la ruleta.</p>
+    }
+  </section>
+</div>
+
+<div class="rejilla rejilla-2">
+  <section class="tarjeta">
+    <h2>Distribución binomial</h2>
+    <p>
+      X = número de veces que ganas en n apuestas a «{{ apuesta().nombre }}». Cada giro es independiente y tiene la misma
+      probabilidad p = {{ binomial().p | num: 4 }}, así que X ~ B(n; p).
+    </p>
+    <div class="campo" style="max-width: 160px">
+      <label for="nbin">n (número de apuestas)</label>
+      <input id="nbin" type="number" min="1" max="100" [ngModel]="nBinomial()" (ngModelChange)="nBinomial.set($event)" />
+    </div>
+    <p class="formula">P(X = k) = C(n, k) · pᵏ · (1 − p)ⁿ⁻ᵏ</p>
+    <app-grafica [config]="binomial().grafica" [alto]="240" />
+    <table class="datos">
+      <tr><td class="izq">E(X) = n·p</td><td>{{ binomial().esperanza | num: 3 }}</td></tr>
+      <tr><td class="izq">Var(X) = n·p·(1 − p)</td><td>{{ binomial().varianza | num: 3 }}</td></tr>
+      <tr><td class="izq">P(ganar {{ binomial().mitad }} o más de {{ binomial().n }})</td><td>{{ binomial().pMitadOMas | num: 4 }}</td></tr>
+    </table>
+  </section>
+
+  <section class="tarjeta">
+    <h2>Distribución geométrica</h2>
+    <p>
+      Y = número de giros hasta ganar por primera vez con la apuesta «{{ apuesta().nombre }}». Y sigue una distribución
+      geométrica con p = {{ apuesta().probabilidad | num: 4 }}.
+    </p>
+    <p class="formula">P(Y = k) = (1 − p)ᵏ⁻¹ · p &nbsp;&nbsp; E(Y) = 1/p</p>
+    <table class="datos">
+      <tr><td class="izq">Giros esperados hasta el primer acierto, E(Y)</td><td>{{ geometrica().esperanza | num: 2 }}</td></tr>
+      <tr><td class="izq">P(acertar al menos una vez en 10 giros) = 1 − (1 − p)¹⁰</td><td>{{ geometrica().pEn10 | num: 4 }}</td></tr>
+    </table>
+    <p class="nota">Apostando a un solo número hay que esperar en promedio 37 giros para acertar.</p>
+  </section>
+</div>

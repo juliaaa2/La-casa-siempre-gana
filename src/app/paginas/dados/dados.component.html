@@ -1,0 +1,225 @@
+<h1>🎲 Dos dados</h1>
+
+<div class="pestanas">
+  <button [class.activa]="pestana() === 'jugar'" (click)="pestana.set('jugar')">Jugar</button>
+  <button [class.activa]="pestana() === 'detective'" (click)="pestana.set('detective')">Modo detective</button>
+</div>
+
+@if (pestana() === 'jugar') {
+  <div class="rejilla rejilla-2">
+    <section class="mesa">
+      <h2>Haz tu apuesta</h2>
+      <div class="opciones">
+        @for (a of apuestas; track a.id) {
+          <button class="opcion" [class.activa]="apuestaId() === a.id" (click)="apuestaId.set(a.id)">{{ a.nombre }}</button>
+        }
+      </div>
+      <p>{{ apuesta().descripcion }}</p>
+      <div class="fila">
+        <div class="campo">
+          <label for="monto" style="color: #fff">Monto a apostar</label>
+          <input id="monto" type="number" min="100" step="100" [(ngModel)]="monto" />
+        </div>
+        <button class="boton" style="margin-bottom: 10px" (click)="lanzar()">Lanzar los dados</button>
+      </div>
+      @if (mensaje()) {
+        <p style="color: #ffcdd2">{{ mensaje() }}</p>
+      }
+      @if (ultimo(); as u) {
+        <div style="text-align: center; margin-top: 10px">
+          <span class="dado">{{ dibujo(u.d1) }}</span><span class="dado">{{ dibujo(u.d2) }}</span>
+          <p class="resultado-grande">{{ u.d1 }} + {{ u.d2 }} = {{ u.d1 + u.d2 }}</p>
+          <p [style.color]="u.ganancia > 0 ? '#a5d6a7' : '#ffcdd2'" style="font-weight: 700; font-size: 1.2rem">
+            {{ u.ganancia > 0 ? 'Ganaste ' + (u.ganancia | pesos) : 'Perdiste ' + (0 - u.ganancia | pesos) }}
+          </p>
+        </div>
+      }
+    </section>
+
+    <app-panel-teoria
+      [evento]="'Evento: ' + apuesta().nombre + '. La frecuencia se calcula con todos tus lanzamientos.'"
+      [probabilidad]="apuesta().probabilidad"
+      [frecuencia]="frecuenciaEvento()"
+      [n]="lanzamientos().length"
+      [valorEsperado]="valorEsperado1000()"
+      [gananciaPromedio]="gananciaPor1000()"
+      [desviacion]="desviacion1000()"
+    />
+  </div>
+
+  <section class="tarjeta">
+    <h2>Distribución bidimensional de (X₁, X₂)</h2>
+    <p>
+      X₁ es el resultado del primer dado y X₂ el del segundo. El espacio muestral tiene 36 pares igualmente probables,
+      así que la distribución conjunta teórica es P(X₁ = i, X₂ = j) = 1/36 ≈ {{ unoSobre36 | num: 4 }} para cada celda.
+      La tabla muestra la <strong>distribución conjunta observada</strong> (frecuencia relativa de cada par) con sus
+      <strong>distribuciones marginales</strong> en el borde.
+    </p>
+    <div style="overflow-x: auto">
+      <table class="datos calor">
+        <tr>
+          <th>X₁ \ X₂</th>
+          @for (j of caras; track j) {
+            <th>{{ j }}</th>
+          }
+          <th class="marginal">f(X₁)</th>
+        </tr>
+        @for (i of caras; track i; let fi = $index) {
+          <tr>
+            <th>{{ i }}</th>
+            @for (j of caras; track j; let cj = $index) {
+              <td [style.background]="colorCelda(tabla().conjunta[fi][cj])">{{ tabla().conjunta[fi][cj] | num: 3 }}</td>
+            }
+            <td class="marginal">{{ tabla().marginalFilas[fi] | num: 3 }}</td>
+          </tr>
+        }
+        <tr>
+          <th class="marginal">f(X₂)</th>
+          @for (j of caras; track j; let cj = $index) {
+            <td class="marginal">{{ tabla().marginalColumnas[cj] | num: 3 }}</td>
+          }
+          <td class="marginal">{{ tabla().total ? 1 : 0 }}</td>
+        </tr>
+      </table>
+    </div>
+    <p class="nota">
+      Marginal teórica de cada dado: P(X₁ = i) = Σⱼ P(X₁ = i, X₂ = j) = 6/36 = 1/6 ≈ 0,167. Total de lanzamientos:
+      {{ tabla().total }}.
+    </p>
+
+    <div class="rejilla rejilla-2" style="margin-top: 14px">
+      <div>
+        <h3>Distribución condicional de X₂ dado X₁</h3>
+        <div class="fila">
+          <div class="campo">
+            <label for="cond">Valor del primer dado (X₁)</label>
+            <select id="cond" [ngModel]="condicionX1()" (ngModelChange)="condicionX1.set($event)">
+              @for (k of caras; track k) {
+                <option [ngValue]="k">{{ k }}</option>
+              }
+            </select>
+          </div>
+        </div>
+        <p class="formula">P(X₂ = j | X₁ = {{ condicionX1() }}) = P(X₁ = {{ condicionX1() }}, X₂ = j) / P(X₁ = {{ condicionX1() }})</p>
+        <table class="datos">
+          <tr>
+            <th>X₂ = j</th>
+            @for (j of caras; track j) {
+              <th>{{ j }}</th>
+            }
+          </tr>
+          <tr>
+            <td>Observada</td>
+            @for (v of condicional().fila; track $index) {
+              <td>{{ v | num: 3 }}</td>
+            }
+          </tr>
+          <tr>
+            <td>Teórica</td>
+            @for (j of caras; track j) {
+              <td>0,167</td>
+            }
+          </tr>
+        </table>
+        <p>
+          P(S &gt; 9 | X₁ = {{ condicionX1() }}): teórica {{ condicional().mayor9Teorica | num: 4 }}, observada
+          {{ condicional().n ? (condicional().mayor9 | num: 4) : '—' }} ({{ condicional().n }} lanzamientos con X₁ =
+          {{ condicionX1() }}).
+        </p>
+        <p class="nota">
+          Como los dados son independientes, la condicional de X₂ no depende de X₁: siempre es 1/6. Eso es lo mismo que
+          decir P(X₁, X₂) = P(X₁) · P(X₂).
+        </p>
+      </div>
+
+      <div>
+        <h3>Momentos, covarianza y correlación</h3>
+        <table class="datos">
+          <tr><th class="izq">Medida</th><th>Teórica</th><th>Observada</th></tr>
+          <tr><td class="izq">E(S), con S = X₁ + X₂</td><td>{{ teoricos.eS | num: 4 }}</td><td>{{ momentos().n ? (momentos().mediaS | num: 4) : '—' }}</td></tr>
+          <tr><td class="izq">Var(S)</td><td>{{ teoricos.varS | num: 4 }}</td><td>{{ momentos().n > 1 ? (momentos().varS | num: 4) : '—' }}</td></tr>
+          <tr><td class="izq">Cov(X₁, X₂)</td><td>{{ teoricos.covX1X2 | num: 4 }}</td><td>{{ momentos().n > 1 ? (momentos().covX1X2 | num: 4) : '—' }}</td></tr>
+          <tr><td class="izq">Cov(X₁, S)</td><td>{{ teoricos.covX1S | num: 4 }}</td><td>{{ momentos().n > 1 ? (momentos().covX1S | num: 4) : '—' }}</td></tr>
+          <tr><td class="izq">Correlación ρ(X₁, S)</td><td>{{ teoricos.correlacionX1S | num: 4 }}</td><td>{{ momentos().n > 1 ? (momentos().corrX1S | num: 4) : '—' }}</td></tr>
+        </table>
+        <p class="formula">Cov(X, Y) = E(XY) − E(X)E(Y) &nbsp;&nbsp; ρ = Cov(X, Y) / (σₓ σᵧ)</p>
+        <p class="nota">
+          X₁ y X₂ son independientes, por eso su covarianza es 0. En cambio X₁ y la suma S están relacionadas: si el primer
+          dado sale alto, la suma tiende a ser alta (Cov(X₁, S) = Var(X₁) = 35/12).
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="tarjeta">
+    <h2>Distribución de la suma S = X₁ + X₂</h2>
+    <p>El 7 es el valor más probable (6 de 36 pares). La distribución es triangular y simétrica alrededor de 7.</p>
+    <app-grafica [config]="graficaSuma()" [alto]="300" />
+  </section>
+}
+
+@if (pestana() === 'detective') {
+  <section class="mesa">
+    <h2>¿Este dado está cargado?</h2>
+    <p>
+      La app escondió un dado. Puede ser justo o puede estar cargado (con probabilidad 1/2 de cada caso). Lánzalo las
+      veces que quieras y usa la <strong>prueba chi-cuadrado de bondad de ajuste</strong> para decidir.
+    </p>
+    <div class="fila">
+      <button class="boton" (click)="lanzarDetective(1)">Lanzar 1 vez</button>
+      <button class="boton" (click)="lanzarDetective(10)">Lanzar 10 veces</button>
+      <button class="boton" (click)="lanzarDetective(100)">Lanzar 100 veces</button>
+      <button class="boton secundario" (click)="nuevoDado()">Otro dado</button>
+    </div>
+    <p style="margin-top: 10px">Lanzamientos: <strong>{{ totalDetective() }}</strong></p>
+  </section>
+
+  <div class="rejilla rejilla-2">
+    <section class="tarjeta">
+      <h3>Frecuencias observadas vs. esperadas</h3>
+      <app-grafica [config]="graficaDetective()" [alto]="280" />
+    </section>
+
+    <section class="tarjeta">
+      <h3>Prueba de hipótesis (α = 0,05)</h3>
+      <p><strong>H₀:</strong> el dado es justo, P(cara i) = 1/6 para todas las caras.</p>
+      <p><strong>H₁:</strong> el dado no es justo (al menos una cara tiene otra probabilidad).</p>
+      <p class="formula">χ² = Σ (Oᵢ − Eᵢ)² / Eᵢ, &nbsp; con Eᵢ = n/6 y k − 1 = 5 grados de libertad</p>
+      @if (totalDetective() >= 30) {
+        <table class="datos">
+          <tr><td class="izq">χ² calculado</td><td>{{ prueba().estadistico | num: 4 }}</td></tr>
+          <tr><td class="izq">χ² crítico (0,05; 5)</td><td>{{ prueba().valorCritico | num: 4 }}</td></tr>
+          <tr><td class="izq">Valor p</td><td>{{ prueba().valorP | valorP }}</td></tr>
+        </table>
+        <p>
+          @if (prueba().rechazaH0) {
+            Como χ² = {{ prueba().estadistico | num: 2 }} es mayor que {{ prueba().valorCritico | num: 2 }},
+            <strong class="perdio">se rechaza H₀</strong>: hay evidencia de que el dado está cargado.
+          } @else {
+            Como χ² = {{ prueba().estadistico | num: 2 }} es menor que {{ prueba().valorCritico | num: 2 }},
+            <strong class="gano">no se rechaza H₀</strong>: no hay evidencia suficiente para decir que el dado está cargado.
+          }
+        </p>
+        <button class="boton secundario" (click)="revelar()">Revelar la verdad</button>
+        @if (revelado()) {
+          <p style="margin-top: 10px">
+            El dado era <strong>{{ esCargado() ? 'CARGADO' : 'JUSTO' }}</strong>.
+            @if (esCargado()) {
+              (El 6 salía con probabilidad 0,25 y las otras caras con 0,15.)
+            }
+            @if (prueba().rechazaH0 === esCargado()) {
+              <span class="gano">La prueba acertó.</span>
+            } @else {
+              <span class="perdio">
+                La prueba se equivocó:
+                {{ esCargado() ? 'error tipo II (no detectó un dado cargado; con más lanzamientos es más fácil detectarlo).' : 'error tipo I (pasa con probabilidad α = 0,05).' }}
+              </span>
+            }
+          </p>
+        }
+      } @else {
+        <p class="nota">Lanza al menos 30 veces para que cada frecuencia esperada sea de 5 o más y la prueba sea válida.</p>
+      }
+    </section>
+  </div>
+}

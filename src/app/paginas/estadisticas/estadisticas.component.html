@@ -1,0 +1,252 @@
+<h1>📊 Estadísticas</h1>
+
+@if (jugador.nombre()) {
+  <section class="tarjeta">
+    <h2>Mis estadísticas ({{ jugador.nombre() }})</h2>
+    @if (mio().jugadas > 0) {
+      <div class="rejilla rejilla-2">
+        <div>
+          <table class="datos">
+            <tr><td class="izq">Jugadas</td><td>{{ mio().jugadas }}</td></tr>
+            <tr><td class="izq">Total apostado</td><td>{{ mio().totalApostado | pesos }}</td></tr>
+            <tr><td class="izq">Ganancia total</td><td [class.gano]="mio().gananciaTotal > 0" [class.perdio]="mio().gananciaTotal < 0">{{ mio().gananciaTotal | pesos }}</td></tr>
+            <tr><td class="izq">Porcentaje de jugadas ganadas</td><td>{{ mio().porcentajeGanadas | num: 2 }} %</td></tr>
+            <tr><td class="izq">Media de la ganancia por jugada (x̄)</td><td>{{ mio().ganancias.media | pesos }}</td></tr>
+            <tr><td class="izq">Mediana</td><td>{{ mio().ganancias.mediana | pesos }}</td></tr>
+            <tr><td class="izq">Desviación estándar (s)</td><td>{{ mio().ganancias.desviacion | pesos }}</td></tr>
+            <tr><td class="izq">Coeficiente de variación</td><td>{{ mio().ganancias.coefVariacion | num: 1 }} %</td></tr>
+            <tr><td class="izq">Mínimo / máximo</td><td>{{ mio().ganancias.minimo | pesos }} / {{ mio().ganancias.maximo | pesos }}</td></tr>
+            <tr><td class="izq">Mejor racha (victorias seguidas)</td><td>{{ mio().rachas.mejor }}</td></tr>
+            <tr><td class="izq">Peor racha (derrotas seguidas)</td><td>{{ mio().rachas.peor }}</td></tr>
+          </table>
+        </div>
+        <div>
+          <app-grafica [config]="graficaMia()" [alto]="300" />
+          @if (mio().regresion; as r) {
+            <p class="formula">Ŷ = {{ r.b0 | num: 2 }} + ({{ r.b1 | num: 2 }}) · X &nbsp;&nbsp; R² = {{ r.r2 | pct }}</p>
+            <p class="nota">
+              La pendiente es tu ganancia promedio por jugada según la regresión. F = {{ r.f | num: 2 }} y F crítico (0,05; 1;
+              {{ r.glError }}) = {{ r.fCritico | num: 3 }}.
+            </p>
+          }
+        </div>
+      </div>
+    } @else {
+      <p class="nota">Todavía no tienes jugadas. Juega en los dados, la ruleta o las cartas.</p>
+    }
+  </section>
+}
+
+<section class="tarjeta">
+  <h2>Jugadas del grupo</h2>
+  <p>
+    {{ todas().length }} jugadas de {{ porJugador().length }} jugadores.
+    Fuente: {{ registro.usandoFirebase ? 'Firebase (todo el grupo)' : 'este navegador (Firebase no está configurado)' }}.
+  </p>
+  @if (registro.errorFirebase()) {
+    <p class="perdio">{{ registro.errorFirebase() }}</p>
+  }
+  <div class="fila">
+    @if (registro.usandoFirebase) {
+      <button class="boton secundario" (click)="recargar()">Actualizar datos</button>
+    }
+    <button class="boton secundario" (click)="exportar()" [disabled]="todas().length === 0">Descargar CSV (Excel)</button>
+    @if (jugador.nombre()) {
+      @if (!confirmarBorrado()) {
+        <button class="boton secundario" (click)="confirmarBorrado.set(true)">Borrar mis jugadas de este navegador</button>
+      } @else {
+        <button class="boton peligro" (click)="borrar()">Sí, borrar mis jugadas</button>
+        <button class="boton secundario" (click)="confirmarBorrado.set(false)">Cancelar</button>
+      }
+    }
+  </div>
+</section>
+
+@if (todas().length > 0) {
+  <section class="tarjeta">
+    <h2>Estadística descriptiva por jugador</h2>
+    <div style="overflow-x: auto">
+      <table class="datos">
+        <tr>
+          <th class="izq">Jugador</th><th>Jugadas</th><th>Total apostado</th><th>Ganancia total</th><th>% ganadas</th>
+          <th>Media x̄</th><th>Desviación s</th><th>CV</th>
+        </tr>
+        @for (p of porJugador(); track p.nombre) {
+          <tr>
+            <td class="izq">{{ p.nombre }}</td>
+            <td>{{ p.resumen.jugadas }}</td>
+            <td>{{ p.resumen.totalApostado | pesos }}</td>
+            <td [class.gano]="p.resumen.gananciaTotal > 0" [class.perdio]="p.resumen.gananciaTotal < 0">{{ p.resumen.gananciaTotal | pesos }}</td>
+            <td>{{ p.resumen.porcentajeGanadas | num: 1 }} %</td>
+            <td>{{ p.resumen.ganancias.media | pesos }}</td>
+            <td>{{ p.resumen.ganancias.desviacion | pesos }}</td>
+            <td>{{ p.resumen.ganancias.coefVariacion | num: 1 }} %</td>
+          </tr>
+        }
+      </table>
+    </div>
+  </section>
+
+  <section class="tarjeta">
+    <h2>Tabla bidimensional: juego × resultado</h2>
+    @if (juegoResultado(); as jr) {
+      <div class="rejilla rejilla-2">
+        <div>
+          <h3>Frecuencias absolutas</h3>
+          <table class="datos">
+            <tr><th class="izq">Juego</th>
+              @for (c of jr.tabla.columnas; track c) { <th>{{ c }}</th> }
+              <th>Total</th></tr>
+            @for (f of jr.tabla.filas; track f; let i = $index) {
+              <tr>
+                <td class="izq">{{ f }}</td>
+                @for (v of jr.tabla.conteos[i]; track $index) { <td>{{ v }}</td> }
+                <td><strong>{{ jr.tabla.conteos[i][0] + jr.tabla.conteos[i][1] }}</strong></td>
+              </tr>
+            }
+            <tr class="total">
+              <td class="izq">Total</td>
+              <td>{{ jr.tabla.conteos[0][0] + jr.tabla.conteos[1][0] + jr.tabla.conteos[2][0] }}</td>
+              <td>{{ jr.tabla.conteos[0][1] + jr.tabla.conteos[1][1] + jr.tabla.conteos[2][1] }}</td>
+              <td>{{ jr.tabla.total }}</td>
+            </tr>
+          </table>
+
+          <h3>Distribución conjunta y marginales</h3>
+          <table class="datos">
+            <tr><th class="izq">Juego</th>
+              @for (c of jr.tabla.columnas; track c) { <th>{{ c }}</th> }
+              <th>Marginal</th></tr>
+            @for (f of jr.tabla.filas; track f; let i = $index) {
+              <tr>
+                <td class="izq">{{ f }}</td>
+                @for (v of jr.tabla.conjunta[i]; track $index) { <td>{{ v | num: 4 }}</td> }
+                <td><strong>{{ jr.tabla.marginalFilas[i] | num: 4 }}</strong></td>
+              </tr>
+            }
+            <tr class="total">
+              <td class="izq">Marginal</td>
+              @for (v of jr.tabla.marginalColumnas; track $index) { <td>{{ v | num: 4 }}</td> }
+              <td>1</td>
+            </tr>
+          </table>
+        </div>
+        <div>
+          <h3>Distribución condicional: P(resultado | juego)</h3>
+          <table class="datos">
+            <tr><th class="izq">Juego</th>
+              @for (c of jr.tabla.columnas; track c) { <th>P({{ c }} | juego)</th> }</tr>
+            @for (f of jr.tabla.filas; track f; let i = $index) {
+              <tr>
+                <td class="izq">{{ f }}</td>
+                @for (v of jr.tabla.condicionalDadaFila[i]; track $index) { <td>{{ v | num: 4 }}</td> }
+              </tr>
+            }
+          </table>
+          <h3>¿El resultado depende del juego? (chi-cuadrado de independencia)</h3>
+          <p class="formula">Eᵢⱼ = (total fila i · total columna j) / n &nbsp;&nbsp; χ² = Σ (Oᵢⱼ − Eᵢⱼ)² / Eᵢⱼ</p>
+          <table class="datos">
+            <tr><td class="izq">χ² calculado</td><td>{{ jr.prueba.estadistico | num: 4 }}</td></tr>
+            <tr><td class="izq">Grados de libertad (3 − 1)(2 − 1)</td><td>{{ jr.prueba.gl }}</td></tr>
+            <tr><td class="izq">χ² crítico (0,05)</td><td>{{ jr.prueba.valorCritico | num: 4 }}</td></tr>
+            <tr><td class="izq">Valor p</td><td>{{ jr.prueba.valorP | valorP }}</td></tr>
+          </table>
+          <p>
+            @if (jr.prueba.rechazaH0) {
+              Dado que χ² es mayor que el valor crítico, se rechaza la independencia: la probabilidad de ganar sí depende del
+              juego.
+            } @else {
+              Dado que χ² es menor que el valor crítico, no se rechaza la independencia: con estos datos no hay evidencia de
+              que la probabilidad de ganar dependa del juego.
+            }
+          </p>
+        </div>
+      </div>
+    }
+  </section>
+
+  <div class="rejilla rejilla-2">
+    <section class="tarjeta">
+      <h2>Correlación: total apostado vs. pérdida total</h2>
+      @if (correlacion().puntos.length >= 3) {
+        <app-grafica [config]="correlacion().grafica" [alto]="280" />
+        <table class="datos">
+          <tr><td class="izq">Covarianza</td><td>{{ correlacion().covarianza | num: 0 }}</td></tr>
+          <tr><td class="izq">Coeficiente de correlación de Pearson (r)</td><td>{{ correlacion().correlacion | num: 4 }}</td></tr>
+          @if (correlacion().reg; as r) {
+            <tr><td class="izq">Recta de regresión</td><td>Ŷ = {{ r.b0 | num: 1 }} + ({{ r.b1 | num: 4 }}) X</td></tr>
+          }
+        </table>
+        <p class="nota">
+          Cada punto es un jugador. Si r es positivo, los que apuestan más tienden a perder más. La pendiente de la recta es
+          cuánto se pierde en promedio por cada peso apostado.
+        </p>
+      } @else {
+        <p class="nota">Se necesitan al menos 3 jugadores para calcular la correlación.</p>
+      }
+    </section>
+
+    <section class="tarjeta">
+      <h2>Prueba t: ¿los jugadores pierden lo que dice la teoría?</h2>
+      <p>
+        Variable: ganancia por cada peso apostado en la ruleta (ganancia / monto). Para cualquier apuesta de la ruleta
+        europea, la teoría dice que su media es −1/37 ≈ {{ mediaTeoricaRuleta | num: 4 }}.
+      </p>
+      <p><strong>H₀:</strong> μ = −1/37 &nbsp;&nbsp; <strong>H₁:</strong> μ ≠ −1/37 &nbsp;&nbsp; α = 0,05</p>
+      <p class="formula">t = (x̄ − μ₀) / (s / √n), &nbsp; con n − 1 grados de libertad</p>
+      @if (pruebaT().n >= 2) {
+        <table class="datos">
+          <tr><td class="izq">n (jugadas de ruleta)</td><td>{{ pruebaT().n }}</td></tr>
+          <tr><td class="izq">x̄</td><td>{{ pruebaT().media | num: 4 }}</td></tr>
+          <tr><td class="izq">s</td><td>{{ pruebaT().desviacion | num: 4 }}</td></tr>
+          <tr><td class="izq">t calculado</td><td>{{ pruebaT().t | num: 4 }}</td></tr>
+          <tr><td class="izq">t crítico (0,025; {{ pruebaT().gl }})</td><td>± {{ pruebaT().valorCritico | num: 4 }}</td></tr>
+          <tr><td class="izq">Valor p</td><td>{{ pruebaT().valorP | valorP }}</td></tr>
+        </table>
+        <p>
+          @if (pruebaT().rechazaH0) {
+            Dado que |t| es mayor que el valor crítico, se rechaza H₀: la ganancia promedio de los jugadores es distinta de
+            la teórica.
+          } @else {
+            Dado que |t| es menor que el valor crítico, no se rechaza H₀: los resultados de los jugadores son consistentes con
+            la teoría (pierden en promedio 1/37 de lo que apuestan).
+          }
+        </p>
+      } @else {
+        <p class="nota">Se necesitan al menos 2 jugadas de ruleta.</p>
+      }
+    </section>
+  </div>
+
+  <section class="tarjeta">
+    <h2>Dados del grupo: dado 1 × dado 2</h2>
+    <p>
+      Frecuencias absolutas de los {{ dadosGrupo().tabla.total }} lanzamientos de todos los jugadores. Si los dados son
+      independientes, la prueba chi-cuadrado de independencia no debería rechazar H₀.
+    </p>
+    <table class="datos">
+      <tr><th>X₁ \ X₂</th>
+        @for (c of dadosGrupo().tabla.columnas; track c) { <th>{{ c }}</th> }
+        <th>Total</th></tr>
+      @for (f of dadosGrupo().tabla.filas; track f; let i = $index) {
+        <tr>
+          <th>{{ f }}</th>
+          @for (v of dadosGrupo().tabla.conteos[i]; track $index) { <td>{{ v }}</td> }
+          <td><strong>{{ dadosGrupo().tabla.marginalFilas[i] * dadosGrupo().tabla.total | num: 0 }}</strong></td>
+        </tr>
+      }
+    </table>
+    @if (dadosGrupo().tabla.total >= 180) {
+      <p>
+        χ² = {{ dadosGrupo().prueba.estadistico | num: 3 }}, gl = 25, χ² crítico (0,05) = {{ dadosGrupo().prueba.valorCritico | num: 3 }},
+        valor p = {{ dadosGrupo().prueba.valorP | valorP }}.
+        {{ dadosGrupo().prueba.rechazaH0 ? 'Se rechaza la independencia.' : 'No se rechaza la independencia: los dos dados se comportan como independientes.' }}
+      </p>
+    } @else {
+      <p class="nota">
+        Para la prueba de independencia se necesitan al menos 180 lanzamientos (frecuencia esperada de 5 o más en las 36
+        celdas).
+      </p>
+    }
+  </section>
+}
