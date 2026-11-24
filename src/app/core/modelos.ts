@@ -1,10 +1,11 @@
-export type Juego = 'dados' | 'ruleta';
+export type Juego = 'dados' | 'ruleta' | 'cartas';
 
-export const JUEGOS: readonly Juego[] = ['dados', 'ruleta'];
+export const JUEGOS: readonly Juego[] = ['dados', 'ruleta', 'cartas'];
 
 export const NOMBRE_JUEGO: Record<Juego, string> = {
   dados: 'Dados',
   ruleta: 'Ruleta',
+  cartas: 'Cartas',
 };
 
 /** Una jugada registrada. Es la unidad de datos de todo el análisis. */
@@ -29,7 +30,7 @@ export interface Jugada {
   dado2?: number;
   /** Solo para ruleta: el número que salió */
   numero?: number;
-  /** Probabilidad de ganar en el momento de la apuesta (opcional) */
+  /** Solo para cartas: probabilidad condicional de ganar en el momento de la apuesta */
   probabilidad?: number;
 }
 
