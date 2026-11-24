@@ -1,6 +1,6 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { environment } from '../../environments/environment';
-import { Jugada } from '../core/modelos';
+import { JUEGOS, Jugada } from '../core/modelos';
 import { JugadorService } from './jugador.service';
 
 const CLAVE_JUGADAS = 'casa.jugadas';
@@ -92,7 +92,7 @@ export class JugadasService {
       const { collection, getDocs } = await import('firebase/firestore');
       const db = await this.baseDeDatos();
       const resultado = await getDocs(collection(db, COLECCION));
-      const remotas = resultado.docs.map((d) => d.data() as unknown as Jugada);
+      const remotas = resultado.docs.map((d) => d.data() as unknown as Jugada).filter(esJuegoActual);
       // Une las jugadas remotas con las locales sin repetir (por id)
       const porId = new Map<string, Jugada>();
       for (const j of [...remotas, ...this._jugadas()]) porId.set(j.id, j);
@@ -117,11 +117,16 @@ export class JugadasService {
   }
 }
 
+/** Descarta jugadas guardadas de juegos que ya no están en la app (por ejemplo, cartas). */
+function esJuegoActual(j: Jugada): boolean {
+  return JUEGOS.includes(j.juego);
+}
+
 function leerLocales(): Jugada[] {
   try {
     const texto = localStorage.getItem(CLAVE_JUGADAS);
     const datos = texto ? JSON.parse(texto) : [];
-    return Array.isArray(datos) ? (datos as Jugada[]) : [];
+    return Array.isArray(datos) ? (datos as Jugada[]).filter(esJuegoActual) : [];
   } catch {
     return [];
   }

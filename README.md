@@ -4,7 +4,7 @@ Laboratorio de probabilidad en un casino virtual. Proyecto de Estadística, Univ
 
 **Integrantes:** Katherin Chamorro, Ángela Chávez, Sebastián Tintinago y Juliana Díaz.
 
-La app tiene 3 juegos (dos dados, ruleta y cartas). Mientras se juega, compara lo que dice la teoría de probabilidad
+La app tiene 2 juegos (dos dados y ruleta). Mientras se juega, compara lo que dice la teoría de probabilidad
 con lo que realmente está pasando, y analiza estadísticamente las jugadas de todo el grupo. No se apuesta dinero real:
 cada jugador empieza con $100.000 ficticios.
 
@@ -28,8 +28,6 @@ Para generar la versión de producción: `npm run build` (queda en `dist/casa-si
 | Inicio | Nombre del jugador, saldo y acceso a los juegos | — |
 | Dados | Apuestas a la suma, mapa de calor 6 × 6, condicionales, momentos y gráfica de la suma. Modo detective con un dado que puede estar cargado | Distribución bidimensional (conjunta, marginales, condicionales), independencia, covarianza, correlación, chi-cuadrado de bondad de ajuste, errores tipo I y II |
 | Ruleta | Apuestas a color, par/impar o un número, tablero, regresión de la ganancia acumulada y ley de los grandes números | Probabilidad clásica, valor esperado, varianza, binomial, geométrica, regresión lineal con tabla ANOVA |
-| Cartas | Mayor o menor sin reposición, con el pago según la probabilidad | Probabilidad condicional, teorema de Bayes, hipergeométrica vs. binomial |
-| Simulación | 1.000, 10.000 o 100.000 jugadas automáticas | Ley de los grandes números, Monte Carlo, regresión y ANOVA |
 | Estadísticas | Resultados del jugador y del grupo, descarga en CSV | Descriptiva, tabla bidimensional juego × resultado, chi-cuadrado de independencia, correlación de Pearson, prueba t |
 
 ## Estructura del código
@@ -44,9 +42,7 @@ src/app/
 │   ├── juegos/
 │   │   ├── azar.ts            Números aleatorios con crypto.getRandomValues
 │   │   ├── dados.ts           Juego 1
-│   │   ├── ruleta.ts          Juego 2
-│   │   ├── cartas.ts          Juego 3
-│   │   └── simulacion.ts      Simulación Monte Carlo
+│   │   └── ruleta.ts          Juego 2
 │   └── modelos.ts             Tipo Jugada, valor esperado y varianza de una apuesta
 ├── servicios/
 │   ├── jugador.service.ts     Nombre y saldo del jugador
@@ -55,8 +51,8 @@ src/app/
 └── paginas/                   Una carpeta por página
 ```
 
-Reparto sugerido: integrante 1 → `dados`, integrante 2 → `ruleta` y `simulacion`, integrante 3 → `cartas`,
-integrante 4 → `servicios`, `estadisticas` y `inicio`.
+Reparto sugerido: integrante 1 → `dados`, integrante 2 → `ruleta`, integrante 3 → `servicios` e `inicio`,
+integrante 4 → `estadisticas`.
 
 Las fórmulas estadísticas están programadas a mano en `core/estadistica` (no se usa ninguna librería de estadística),
 para que se pueda mostrar exactamente qué se calcula. Se verificaron contra Python (scipy) y contra el ejercicio de
@@ -68,9 +64,6 @@ regresión de clase (reducción de sólidos vs. demanda de oxígeno: b₀ = 3,82
   (probabilidad 6/36). En todas, E(G) = −$167 por cada $1.000.
 - **Ruleta europea:** 37 casillas. Rojo, negro, par e impar pagan 1 a 1 (18/37); un número paga 35 a 1 (1/37).
   En todas, E(G) = −1.000/37 ≈ −$27 por cada $1.000.
-- **Cartas:** se apuesta si la siguiente carta es mayor o menor (A es la más alta; si sale igual, se pierde). El pago
-  depende de la probabilidad condicional p: pago = 0,95 · (1 − p) / p, así que E(G) = −0,05 · (1 − p) · monto.
-  Sin esa regla, eligiendo siempre la opción más probable el jugador ganaría a largo plazo.
 
 ## Guardar las jugadas de todo el grupo (Firebase, opcional)
 
@@ -102,4 +95,3 @@ npx firebase-tools deploy
 ```
 
 El archivo `firebase.json` ya trae la configuración de Hosting.
-# La-casa-siempre-gana

@@ -32,7 +32,7 @@
         </div>
       </div>
     } @else {
-      <p class="nota">Todavía no tienes jugadas. Juega en los dados, la ruleta o las cartas.</p>
+      <p class="nota">Todavía no tienes jugadas. Juega en los dados o en la ruleta.</p>
     }
   </section>
 }
@@ -106,8 +106,7 @@
             }
             <tr class="total">
               <td class="izq">Total</td>
-              <td>{{ jr.tabla.conteos[0][0] + jr.tabla.conteos[1][0] + jr.tabla.conteos[2][0] }}</td>
-              <td>{{ jr.tabla.conteos[0][1] + jr.tabla.conteos[1][1] + jr.tabla.conteos[2][1] }}</td>
+              @for (c of jr.tabla.columnas; track c; let j = $index) { <td>{{ sumaColumna(jr.tabla.conteos, j) }}</td> }
               <td>{{ jr.tabla.total }}</td>
             </tr>
           </table>
@@ -147,7 +146,7 @@
           <p class="formula">Eᵢⱼ = (total fila i · total columna j) / n &nbsp;&nbsp; χ² = Σ (Oᵢⱼ − Eᵢⱼ)² / Eᵢⱼ</p>
           <table class="datos">
             <tr><td class="izq">χ² calculado</td><td>{{ jr.prueba.estadistico | num: 4 }}</td></tr>
-            <tr><td class="izq">Grados de libertad (3 − 1)(2 − 1)</td><td>{{ jr.prueba.gl }}</td></tr>
+            <tr><td class="izq">Grados de libertad ({{ jr.tabla.filas.length }} − 1)(2 − 1)</td><td>{{ jr.prueba.gl }}</td></tr>
             <tr><td class="izq">χ² crítico (0,05)</td><td>{{ jr.prueba.valorCritico | num: 4 }}</td></tr>
             <tr><td class="izq">Valor p</td><td>{{ jr.prueba.valorP | valorP }}</td></tr>
           </table>

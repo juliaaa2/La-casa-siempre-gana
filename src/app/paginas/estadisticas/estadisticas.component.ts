@@ -52,6 +52,11 @@ export class EstadisticasComponent {
 
   readonly juegoResultado = computed(() => tablaJuegoResultado(this.todas()));
 
+  /** Total de una columna de una tabla de conteos. */
+  sumaColumna(conteos: number[][], j: number): number {
+    return conteos.reduce((s, fila) => s + fila[j], 0);
+  }
+
   readonly dadosGrupo = computed(() => {
     const tabla = tablaDadosReal(this.todas());
     return { tabla, prueba: chiCuadradoIndependencia(tabla.conteos) };

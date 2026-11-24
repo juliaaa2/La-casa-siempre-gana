@@ -12,8 +12,6 @@ export const routes: Routes = [
   { path: '', loadComponent: () => import('./paginas/inicio/inicio.component').then((m) => m.InicioComponent), title: 'La casa siempre gana' },
   { path: 'dados', canActivate: [requiereJugador], loadComponent: () => import('./paginas/dados/dados.component').then((m) => m.DadosComponent), title: 'Dados' },
   { path: 'ruleta', canActivate: [requiereJugador], loadComponent: () => import('./paginas/ruleta/ruleta.component').then((m) => m.RuletaComponent), title: 'Ruleta' },
-  { path: 'cartas', canActivate: [requiereJugador], loadComponent: () => import('./paginas/cartas/cartas.component').then((m) => m.CartasComponent), title: 'Cartas' },
-  { path: 'simulacion', loadComponent: () => import('./paginas/simulacion/simulacion.component').then((m) => m.SimulacionComponent), title: 'Simulación' },
   { path: 'estadisticas', loadComponent: () => import('./paginas/estadisticas/estadisticas.component').then((m) => m.EstadisticasComponent), title: 'Estadísticas' },
   { path: '**', redirectTo: '' },
 ];

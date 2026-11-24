@@ -13,8 +13,6 @@ import { PesosPipe } from './compartido/formato.pipes';
       <nav>
         <a routerLink="/dados" routerLinkActive="activo">Dados</a>
         <a routerLink="/ruleta" routerLinkActive="activo">Ruleta</a>
-        <a routerLink="/cartas" routerLinkActive="activo">Cartas</a>
-        <a routerLink="/simulacion" routerLinkActive="activo">Simulación</a>
         <a routerLink="/estadisticas" routerLinkActive="activo">Estadísticas</a>
       </nav>
       @if (jugador.nombre()) {
