@@ -19,7 +19,6 @@ import { SALDO_INICIAL } from '../../core/modelos';
       .portada p { max-width: 700px; margin: 0 auto 12px; }
       .juego { text-decoration: none; color: inherit; display: block; }
       .juego:hover { border-color: var(--dorado); }
-      .icono { font-size: 2rem; }
     `,
   ],
 })

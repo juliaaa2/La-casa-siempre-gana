@@ -30,7 +30,6 @@ import {
 } from '../../core/estadistica/estadistica';
 import { valorEsperado, varianzaGanancia } from '../../core/modelos';
 
-const CARAS_DIBUJO = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
 const CARAS_NUM: number[] = [1, 2, 3, 4, 5, 6];
 
 /** Posiciones (1 a 9, por filas) de los puntos en cada cara del dado. */
@@ -244,10 +243,6 @@ export class DadosComponent {
       'Probabilidad / frecuencia relativa',
     );
   });
-
-  dibujo(cara: number): string {
-    return CARAS_DIBUJO[cara - 1];
-  }
 
   /** Intensidad del color de una celda del mapa de calor. */
   colorCelda(valor: number): string {

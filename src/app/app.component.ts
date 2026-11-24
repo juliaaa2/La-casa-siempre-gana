@@ -9,7 +9,7 @@ import { PesosPipe } from './compartido/formato.pipes';
   imports: [RouterOutlet, RouterLink, RouterLinkActive, PesosPipe],
   template: `
     <header class="barra">
-      <a routerLink="/" class="marca">🎲 La casa siempre gana</a>
+      <a routerLink="/" class="marca">La casa siempre gana</a>
       <nav>
         <a routerLink="/dados" routerLinkActive="activo">Dados</a>
         <a routerLink="/ruleta" routerLinkActive="activo">Ruleta</a>
